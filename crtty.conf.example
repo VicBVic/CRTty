@@ -1,0 +1,24 @@
+# CRTty Configuration
+# Place this file at: ~/.config/crtty.conf
+#
+# All values are optional — defaults are used for any missing key.
+# Lines starting with # or ; are comments.
+
+# Master enable switch (also requires ENABLE_CRTTY=1 env var)
+enabled=1
+
+# Scanline intensity: 0.0 (off) to 1.0 (full dark bands)
+# Tip: keep ≤0.3 for readable terminal text
+scanline_intensity=0.75
+
+# Phosphor glow strength: 0.5 (subtle) to 2.0 (heavy bloom)
+phosphor_strength=1.1
+
+# Barrel distortion / screen curvature: 0.0 (flat) to 0.1 (very curved)
+curvature=0.04
+
+# Vignette (corner darkening): 0.0 (none) to 1.0 (heavy)
+vignette=0.35
+
+# Chromatic aberration (RGB fringing): 0.0 (none) to 0.01 (noticeable)
+aberration=0.003

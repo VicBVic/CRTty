@@ -1,0 +1,171 @@
+# CRTty
+
+**Post-processing shader framework for [kitty](https://sw.kovidgoyal.net/kitty/) terminal via `LD_PRELOAD`**
+
+Inject custom fragment shaders into kitty (or any EGL/GLX application) —
+no patches, no Vulkan, no special drivers.  Ships with a built-in
+**CRT monitor** effect (scanlines, phosphor glow, barrel distortion,
+vignette, chromatic aberration).
+
+## Quick Start
+
+```bash
+make install    # builds + copies to ~/.local, creates `crtty` launcher
+crtty           # launches kitty with CRT effect
+```
+
+Or manually:
+
+```bash
+cargo build --release
+LD_PRELOAD=$(pwd)/target/release/libcrtty_crt.so ENABLE_CRTTY=1 kitty
+```
+
+### Uninstall
+
+```bash
+make uninstall
+```
+
+## Write your own effect
+
+Create a new Rust library crate:
+
+```bash
+cargo new --lib my-shader && cd my-shader
+```
+
+`Cargo.toml`:
+
+```toml
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+crtty = { git = "https://github.com/<you>/CRTty" }
+```
+
+`src/lib.rs`:
+
+```rust
+struct Grayscale;
+
+impl crtty::Effect for Grayscale {
+    fn fragment_shader(&self) -> &str {
+        "#version 330 core
+         in vec2 v_uv;
+         out vec4 o_color;
+         uniform sampler2D u_input;
+         void main() {
+             vec3 c = texture(u_input, v_uv).rgb;
+             float l = dot(c, vec3(0.299, 0.587, 0.114));
+             o_color = vec4(l, l, l, 1.0);
+         }"
+    }
+}
+
+crtty::main!(Grayscale);
+```
+
+Build and use:
+
+```bash
+cargo build --release
+LD_PRELOAD=$(pwd)/target/release/libmy_shader.so ENABLE_CRTTY=1 kitty
+```
+
+## The `Effect` trait
+
+```rust
+pub trait Effect: Send + 'static {
+    /// GLSL 330 core fragment shader.
+    /// Receives `in vec2 v_uv` and `uniform sampler2D u_input`.
+    /// Must write `out vec4 o_color`.
+    fn fragment_shader(&self) -> &str;
+
+    /// Called once after shader compilation. Cache uniform locations here.
+    fn setup(&mut self, _program: u32) {}
+
+    /// Called each frame. Set your custom uniforms.
+    fn set_uniforms(&self, _program: u32, _w: i32, _h: i32, _frame: u64) {}
+
+    /// Per-frame toggle. Default: true.
+    fn enabled(&self) -> bool { true }
+
+    /// Env var that must be "1" to activate. Default: "ENABLE_CRTTY".
+    fn env_var(&self) -> Option<&str> { Some("ENABLE_CRTTY") }
+}
+```
+
+Helpers for setting uniforms:
+
+```rust
+crtty::gl::get_uniform_location(program, "my_param")  // -> i32
+crtty::gl::uniform_1f(location, 0.5)
+crtty::gl::uniform_1i(location, 1)
+```
+
+## How it works
+
+```
+App (GLFW / EGL / GLX)
+  │
+  ├─ dlsym(handle, "eglSwapBuffers")
+  │     ↑ intercepted by your .so
+  │
+  └─ eglSwapBuffers(dpy, surface)
+       ├─ glCopyTexSubImage2D → capture framebuffer
+       ├─ Bind your shader (GLSL 330 core)
+       ├─ Your set_uniforms() runs
+       ├─ Draw fullscreen triangle
+       └─ Call real eglSwapBuffers
+```
+
+## Project structure
+
+```
+src/
+  lib.rs          Effect trait, main! macro
+  hook.rs         dlsym interception
+  pass.rs         Render pass engine
+  gl.rs           GL function pointers + helpers
+  config.rs       Config file parser
+  effects/
+    crt.rs        Built-in CRT effect
+crt/
+  src/lib.rs      crtty::main!(crtty::effects::Crt::default())
+```
+
+## CRT effect configuration
+
+Edit `~/.config/crtty.conf`:
+
+```ini
+enabled=1
+scanline_intensity=0.75
+phosphor_strength=1.1
+curvature=0.04
+vignette=0.35
+aberration=0.003
+```
+
+| Parameter | Range | Description |
+|-----------|-------|-------------|
+| `enabled` | `0`/`1` | Master switch |
+| `scanline_intensity` | 0.0–1.0 | Horizontal raster line darkness |
+| `phosphor_strength` | 0.0–3.0 | Bloom intensity |
+| `curvature` | 0.0–0.5 | Barrel distortion |
+| `vignette` | 0.0–2.0 | Corner darkening |
+| `aberration` | 0.0–0.05 | RGB channel offset |
+
+## Requirements
+
+- Rust stable (edition 2021)
+- Linux with glibc (for `dlvsym`)
+- OpenGL 3.3 core profile
+
+## License
+
+MIT
+
+

@@ -1,0 +1,25 @@
+[workspace]
+members = [".", "crt"]
+
+[package]
+name = "crtty"
+version = "0.1.0"
+edition = "2021"
+description = "Post-processing shader framework for OpenGL apps via LD_PRELOAD"
+license = "MIT"
+readme = "README.md"
+keywords = ["crt", "kitty", "terminal", "opengl", "postprocessing"]
+
+[lib]
+name = "crtty"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true
+strip = "symbols"
+
+[dependencies]
+libc = "0.2"

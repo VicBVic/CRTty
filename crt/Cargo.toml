@@ -1,0 +1,13 @@
+[package]
+name = "crtty-crt"
+version = "0.1.0"
+edition = "2021"
+description = "CRT monitor effect for kitty — powered by crtty"
+license = "MIT"
+
+[lib]
+name = "crtty_crt"
+crate-type = ["cdylib"]
+
+[dependencies]
+crtty = { path = ".." }
