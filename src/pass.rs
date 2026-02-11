@@ -103,7 +103,9 @@ unsafe fn do_pass(state: &mut PassState, effect: &dyn Effect) {
     let mut vp = [0i32; 4];
     (glGetIntegerv.unwrap())(GL_VIEWPORT, vp.as_mut_ptr());
     let (w, h) = (vp[2], vp[3]);
-    if w <= 0 || h <= 0 { return; }
+    if w <= 0 || h <= 0 {
+        return;
+    }
 
     let saved = SavedState::save();
 

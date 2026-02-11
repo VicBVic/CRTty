@@ -50,19 +50,29 @@ impl CrtConfig {
             cfg.enabled = v == "1" || v.eq_ignore_ascii_case("true");
         }
         if let Some(v) = map.get("scanline_intensity") {
-            if let Ok(f) = v.parse::<f32>() { cfg.scanline_intensity = f.clamp(0.0, 1.0); }
+            if let Ok(f) = v.parse::<f32>() {
+                cfg.scanline_intensity = f.clamp(0.0, 1.0);
+            }
         }
         if let Some(v) = map.get("phosphor_strength") {
-            if let Ok(f) = v.parse::<f32>() { cfg.phosphor_strength = f.clamp(0.0, 3.0); }
+            if let Ok(f) = v.parse::<f32>() {
+                cfg.phosphor_strength = f.clamp(0.0, 3.0);
+            }
         }
         if let Some(v) = map.get("curvature") {
-            if let Ok(f) = v.parse::<f32>() { cfg.curvature = f.clamp(0.0, 0.5); }
+            if let Ok(f) = v.parse::<f32>() {
+                cfg.curvature = f.clamp(0.0, 0.5);
+            }
         }
         if let Some(v) = map.get("vignette") {
-            if let Ok(f) = v.parse::<f32>() { cfg.vignette = f.clamp(0.0, 2.0); }
+            if let Ok(f) = v.parse::<f32>() {
+                cfg.vignette = f.clamp(0.0, 2.0);
+            }
         }
         if let Some(v) = map.get("aberration") {
-            if let Ok(f) = v.parse::<f32>() { cfg.aberration = f.clamp(0.0, 0.05); }
+            if let Ok(f) = v.parse::<f32>() {
+                cfg.aberration = f.clamp(0.0, 0.05);
+            }
         }
 
         eprintln!("[CRTty] Config loaded from {:?}", path);

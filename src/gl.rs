@@ -1,16 +1,29 @@
 //! GL function pointer loader and helpers.
 
-#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals, dead_code)]
+#![allow(
+    non_snake_case,
+    non_camel_case_types,
+    non_upper_case_globals,
+    dead_code
+)]
 
 use std::sync::{Once, OnceLock};
 
 pub struct GlFn<T: Copy>(OnceLock<T>);
 
 impl<T: Copy> GlFn<T> {
-    pub const fn new() -> Self { Self(OnceLock::new()) }
-    pub fn set(&self, val: T) { let _ = self.0.set(val); }
-    pub fn get(&self) -> Option<T> { self.0.get().copied() }
-    pub fn unwrap(&self) -> T { *self.0.get().expect("GL function not loaded") }
+    pub const fn new() -> Self {
+        Self(OnceLock::new())
+    }
+    pub fn set(&self, val: T) {
+        let _ = self.0.set(val);
+    }
+    pub fn get(&self) -> Option<T> {
+        self.0.get().copied()
+    }
+    pub fn unwrap(&self) -> T {
+        *self.0.get().expect("GL function not loaded")
+    }
 }
 
 pub type GLenum = u32;
@@ -81,53 +94,128 @@ macro_rules! gl_fn {
     };
 }
 
-gl_fn!(glGenTextures,        unsafe extern "C" fn(GLsizei, *mut GLuint));
-gl_fn!(glDeleteTextures,     unsafe extern "C" fn(GLsizei, *const GLuint));
-gl_fn!(glBindTexture,        unsafe extern "C" fn(GLenum, GLuint));
-gl_fn!(glTexImage2D,         unsafe extern "C" fn(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, *const libc::c_void));
-gl_fn!(glTexParameteri,      unsafe extern "C" fn(GLenum, GLenum, GLint));
-gl_fn!(glActiveTexture,      unsafe extern "C" fn(GLenum));
-gl_fn!(glCopyTexSubImage2D,  unsafe extern "C" fn(GLenum, GLint, GLint, GLint, GLint, GLint, GLsizei, GLsizei));
+gl_fn!(glGenTextures, unsafe extern "C" fn(GLsizei, *mut GLuint));
+gl_fn!(
+    glDeleteTextures,
+    unsafe extern "C" fn(GLsizei, *const GLuint)
+);
+gl_fn!(glBindTexture, unsafe extern "C" fn(GLenum, GLuint));
+gl_fn!(
+    glTexImage2D,
+    unsafe extern "C" fn(
+        GLenum,
+        GLint,
+        GLint,
+        GLsizei,
+        GLsizei,
+        GLint,
+        GLenum,
+        GLenum,
+        *const libc::c_void,
+    )
+);
+gl_fn!(glTexParameteri, unsafe extern "C" fn(GLenum, GLenum, GLint));
+gl_fn!(glActiveTexture, unsafe extern "C" fn(GLenum));
+gl_fn!(
+    glCopyTexSubImage2D,
+    unsafe extern "C" fn(GLenum, GLint, GLint, GLint, GLint, GLint, GLsizei, GLsizei)
+);
 
-gl_fn!(glGenFramebuffers,       unsafe extern "C" fn(GLsizei, *mut GLuint));
-gl_fn!(glDeleteFramebuffers,    unsafe extern "C" fn(GLsizei, *const GLuint));
-gl_fn!(glBindFramebuffer,       unsafe extern "C" fn(GLenum, GLuint));
-gl_fn!(glFramebufferTexture2D,  unsafe extern "C" fn(GLenum, GLenum, GLenum, GLuint, GLint));
-gl_fn!(glCheckFramebufferStatus,unsafe extern "C" fn(GLenum) -> GLenum);
-gl_fn!(glBlitFramebuffer,       unsafe extern "C" fn(GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum));
+gl_fn!(
+    glGenFramebuffers,
+    unsafe extern "C" fn(GLsizei, *mut GLuint)
+);
+gl_fn!(
+    glDeleteFramebuffers,
+    unsafe extern "C" fn(GLsizei, *const GLuint)
+);
+gl_fn!(glBindFramebuffer, unsafe extern "C" fn(GLenum, GLuint));
+gl_fn!(
+    glFramebufferTexture2D,
+    unsafe extern "C" fn(GLenum, GLenum, GLenum, GLuint, GLint)
+);
+gl_fn!(
+    glCheckFramebufferStatus,
+    unsafe extern "C" fn(GLenum) -> GLenum
+);
+gl_fn!(
+    glBlitFramebuffer,
+    unsafe extern "C" fn(
+        GLint,
+        GLint,
+        GLint,
+        GLint,
+        GLint,
+        GLint,
+        GLint,
+        GLint,
+        GLbitfield,
+        GLenum,
+    )
+);
 
-gl_fn!(glCreateShader,     unsafe extern "C" fn(GLenum) -> GLuint);
-gl_fn!(glDeleteShader,     unsafe extern "C" fn(GLuint));
-gl_fn!(glShaderSource,     unsafe extern "C" fn(GLuint, GLsizei, *const *const GLchar, *const GLint));
-gl_fn!(glCompileShader,    unsafe extern "C" fn(GLuint));
-gl_fn!(glGetShaderiv,      unsafe extern "C" fn(GLuint, GLenum, *mut GLint));
-gl_fn!(glGetShaderInfoLog, unsafe extern "C" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar));
-gl_fn!(glCreateProgram,    unsafe extern "C" fn() -> GLuint);
-gl_fn!(glDeleteProgram,    unsafe extern "C" fn(GLuint));
-gl_fn!(glAttachShader,     unsafe extern "C" fn(GLuint, GLuint));
-gl_fn!(glLinkProgram,      unsafe extern "C" fn(GLuint));
-gl_fn!(glGetProgramiv,     unsafe extern "C" fn(GLuint, GLenum, *mut GLint));
-gl_fn!(glGetProgramInfoLog,unsafe extern "C" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar));
-gl_fn!(glUseProgram,       unsafe extern "C" fn(GLuint));
-gl_fn!(glGetUniformLocation,unsafe extern "C" fn(GLuint, *const GLchar) -> GLint);
-gl_fn!(glUniform1i,        unsafe extern "C" fn(GLint, GLint));
-gl_fn!(glUniform1f,        unsafe extern "C" fn(GLint, GLfloat));
+gl_fn!(glCreateShader, unsafe extern "C" fn(GLenum) -> GLuint);
+gl_fn!(glDeleteShader, unsafe extern "C" fn(GLuint));
+gl_fn!(
+    glShaderSource,
+    unsafe extern "C" fn(GLuint, GLsizei, *const *const GLchar, *const GLint)
+);
+gl_fn!(glCompileShader, unsafe extern "C" fn(GLuint));
+gl_fn!(
+    glGetShaderiv,
+    unsafe extern "C" fn(GLuint, GLenum, *mut GLint)
+);
+gl_fn!(
+    glGetShaderInfoLog,
+    unsafe extern "C" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar)
+);
+gl_fn!(glCreateProgram, unsafe extern "C" fn() -> GLuint);
+gl_fn!(glDeleteProgram, unsafe extern "C" fn(GLuint));
+gl_fn!(glAttachShader, unsafe extern "C" fn(GLuint, GLuint));
+gl_fn!(glLinkProgram, unsafe extern "C" fn(GLuint));
+gl_fn!(
+    glGetProgramiv,
+    unsafe extern "C" fn(GLuint, GLenum, *mut GLint)
+);
+gl_fn!(
+    glGetProgramInfoLog,
+    unsafe extern "C" fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar)
+);
+gl_fn!(glUseProgram, unsafe extern "C" fn(GLuint));
+gl_fn!(
+    glGetUniformLocation,
+    unsafe extern "C" fn(GLuint, *const GLchar) -> GLint
+);
+gl_fn!(glUniform1i, unsafe extern "C" fn(GLint, GLint));
+gl_fn!(glUniform1f, unsafe extern "C" fn(GLint, GLfloat));
 
-gl_fn!(glGenVertexArrays,    unsafe extern "C" fn(GLsizei, *mut GLuint));
-gl_fn!(glDeleteVertexArrays, unsafe extern "C" fn(GLsizei, *const GLuint));
-gl_fn!(glBindVertexArray,    unsafe extern "C" fn(GLuint));
+gl_fn!(
+    glGenVertexArrays,
+    unsafe extern "C" fn(GLsizei, *mut GLuint)
+);
+gl_fn!(
+    glDeleteVertexArrays,
+    unsafe extern "C" fn(GLsizei, *const GLuint)
+);
+gl_fn!(glBindVertexArray, unsafe extern "C" fn(GLuint));
 
 gl_fn!(glDrawArrays, unsafe extern "C" fn(GLenum, GLint, GLsizei));
-gl_fn!(glViewport,   unsafe extern "C" fn(GLint, GLint, GLsizei, GLsizei));
+gl_fn!(
+    glViewport,
+    unsafe extern "C" fn(GLint, GLint, GLsizei, GLsizei)
+);
 
 gl_fn!(glGetIntegerv, unsafe extern "C" fn(GLenum, *mut GLint));
-gl_fn!(glGetError,    unsafe extern "C" fn() -> GLenum);
-gl_fn!(glEnable,      unsafe extern "C" fn(GLenum));
-gl_fn!(glDisable,     unsafe extern "C" fn(GLenum));
-gl_fn!(glIsEnabled,   unsafe extern "C" fn(GLenum) -> GLboolean);
-gl_fn!(glClear,       unsafe extern "C" fn(GLbitfield));
-gl_fn!(glClearColor,  unsafe extern "C" fn(GLfloat, GLfloat, GLfloat, GLfloat));
-gl_fn!(glFinish,      unsafe extern "C" fn());
+gl_fn!(glGetError, unsafe extern "C" fn() -> GLenum);
+gl_fn!(glEnable, unsafe extern "C" fn(GLenum));
+gl_fn!(glDisable, unsafe extern "C" fn(GLenum));
+gl_fn!(glIsEnabled, unsafe extern "C" fn(GLenum) -> GLboolean);
+gl_fn!(glClear, unsafe extern "C" fn(GLbitfield));
+gl_fn!(
+    glClearColor,
+    unsafe extern "C" fn(GLfloat, GLfloat, GLfloat, GLfloat)
+);
+gl_fn!(glFinish, unsafe extern "C" fn());
 
 static INIT: Once = Once::new();
 

@@ -1,11 +1,11 @@
-pub mod gl;
 pub mod effects;
+pub mod gl;
 
 #[doc(hidden)]
 pub mod hook;
 
-mod pass;
 mod config;
+mod pass;
 
 #[doc(hidden)]
 pub use libc as __libc;
@@ -26,19 +26,27 @@ pub trait Effect: Send + 'static {
     fn set_uniforms(&self, _program: u32, _width: i32, _height: i32, _frame: u64) {}
 
     /// Per-frame toggle. Default: `true`.
-    fn enabled(&self) -> bool { true }
+    fn enabled(&self) -> bool {
+        true
+    }
 
     /// Env var that must be `"1"` to activate. Default: `"ENABLE_CRTTY"`.
-    fn env_var(&self) -> Option<&str> { Some("ENABLE_CRTTY") }
+    fn env_var(&self) -> Option<&str> {
+        Some("ENABLE_CRTTY")
+    }
 }
 
 #[doc(hidden)]
 pub static __PASS_FN: OnceLock<fn()> = OnceLock::new();
 
 #[doc(hidden)]
-pub fn __register_pass_fn(f: fn()) { let _ = __PASS_FN.set(f); }
+pub fn __register_pass_fn(f: fn()) {
+    let _ = __PASS_FN.set(f);
+}
 
-pub fn run_pass(effect: &mut dyn Effect) { pass::run_pass(effect); }
+pub fn run_pass(effect: &mut dyn Effect) {
+    pass::run_pass(effect);
+}
 
 /// Generate all `LD_PRELOAD` entry points for your effect.
 /// Call once at top level: `crtty::main!(MyEffect::new());`
@@ -50,9 +58,8 @@ macro_rules! main {
         > = ::std::sync::OnceLock::new();
 
         fn __crtty_run_pass() {
-            let mtx = __CRTTY_EFFECT.get_or_init(|| {
-                ::std::sync::Mutex::new(::std::boxed::Box::new($effect_init))
-            });
+            let mtx = __CRTTY_EFFECT
+                .get_or_init(|| ::std::sync::Mutex::new(::std::boxed::Box::new($effect_init)));
             if let Ok(mut eff) = mtx.lock() {
                 $crate::run_pass(&mut **eff);
             }

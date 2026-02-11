@@ -110,9 +110,7 @@ unsafe extern "C" fn crtty_glx_swap(dpy: XDisplay, drawable: GLXDrawable) {
     }
 }
 
-unsafe extern "C" fn crtty_egl_get_proc_address(
-    name: *const libc::c_char,
-) -> *mut libc::c_void {
+unsafe extern "C" fn crtty_egl_get_proc_address(name: *const libc::c_char) -> *mut libc::c_void {
     if !name.is_null() {
         let sym = CStr::from_ptr(name);
         if sym.to_bytes() == b"eglSwapBuffers" {
@@ -160,7 +158,10 @@ pub unsafe fn intercepted_dlsym(
                 let real = real_dlsym(handle, symbol);
                 if !real.is_null() {
                     let _ = REAL_EGL_GET_PROC.set(std::mem::transmute(real));
-                    eprintln!("[CRTty] dlsym intercepted eglGetProcAddress — real={:p}", real);
+                    eprintln!(
+                        "[CRTty] dlsym intercepted eglGetProcAddress — real={:p}",
+                        real
+                    );
                 }
                 return crtty_egl_get_proc_address as *mut libc::c_void;
             }
