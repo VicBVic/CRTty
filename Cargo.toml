@@ -8,8 +8,8 @@ edition = "2021"
 description = "Post-processing shader framework for OpenGL apps via LD_PRELOAD"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/kosa/CRTty"
-homepage = "https://github.com/kosa/CRTty"
+repository = "https://github.com/kosa12/CRTty"
+homepage = "https://github.com/kosa12/CRTty"
 keywords = ["crt", "kitty", "terminal", "opengl", "postprocessing"]
 categories = ["graphics", "rendering"]
 

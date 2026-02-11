@@ -30,7 +30,7 @@
 
           meta = with pkgs.lib; {
             description = "Post-processing shader framework for kitty terminal via LD_PRELOAD";
-            homepage = "https://github.com/kosa/CRTty";
+            homepage = "https://github.com/kosa12/CRTty";
             license = licenses.mit;
             platforms = platforms.linux;
             mainProgram = "crtty";
