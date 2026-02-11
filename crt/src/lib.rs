@@ -1,1 +1,1 @@
-crtty::main!(crtty::effects::Crt::default());
+crtty::main!(crtty::effects::Builtin::from_env());

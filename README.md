@@ -7,24 +7,48 @@ no patches, no Vulkan, no special drivers.  Ships with a built-in
 **CRT monitor** effect (scanlines, phosphor glow, barrel distortion,
 vignette, chromatic aberration).
 
-## Quick Start
+## Installation
+
+Requires **Linux with glibc**, **OpenGL 3.3+**, and **Rust stable** (build only).
+
+### From source
 
 ```bash
-make install    # builds + copies to ~/.local, creates `crtty` launcher
-crtty           # launches kitty with CRT effect
+git clone https://github.com/kosa/CRTty && cd CRTty
+make install        # builds + installs to ~/.local
 ```
 
-Or manually:
+### Arch Linux (AUR)
 
 ```bash
-cargo build --release
-LD_PRELOAD=$(pwd)/target/release/libcrtty_crt.so ENABLE_CRTTY=1 kitty
+yay -S crtty
+```
+
+### Nix
+
+```bash
+nix profile install github:kosa/CRTty
+```
+
+### System-wide
+
+```bash
+sudo make PREFIX=/usr install
 ```
 
 ### Uninstall
 
 ```bash
 make uninstall
+```
+
+## Usage
+
+```bash
+crtty                   # launch kitty with CRT effect (default)
+crtty --list            # show all available effects
+crtty -s greyscale      # use a different effect
+crtty -s crt -- --hold  # pass extra args to kitty
 ```
 
 ## Write your own effect
@@ -132,8 +156,14 @@ src/
   config.rs       Config file parser
   effects/
     crt.rs        Built-in CRT effect
+    greyscale.rs  Greyscale effect
+    invert.rs     Color inversion effect
+cli/
+  src/main.rs     CLI launcher (crtty binary)
 crt/
-  src/lib.rs      crtty::main!(crtty::effects::Crt::default())
+  src/lib.rs      Default cdylib (Builtin::from_env())
+PKGBUILD          Arch Linux / AUR package
+flake.nix         Nix flake
 ```
 
 ## CRT effect configuration
@@ -157,12 +187,6 @@ aberration=0.003
 | `curvature` | 0.0–0.5 | Barrel distortion |
 | `vignette` | 0.0–2.0 | Corner darkening |
 | `aberration` | 0.0–0.05 | RGB channel offset |
-
-## Requirements
-
-- Rust stable (edition 2021)
-- Linux with glibc (for `dlvsym`)
-- OpenGL 3.3 core profile
 
 ## License
 

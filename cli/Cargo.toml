@@ -1,0 +1,11 @@
+[package]
+name = "crtty-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI launcher for CRTty post-processing shaders"
+license = "MIT"
+repository = "https://github.com/kosa/CRTty"
+
+[[bin]]
+name = "crtty"
+path = "src/main.rs"

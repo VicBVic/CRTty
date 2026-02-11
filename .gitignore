@@ -1,1 +1,5 @@
 target/
+*.pkg.tar.*
+*.src.tar.*
+pkg/
+result

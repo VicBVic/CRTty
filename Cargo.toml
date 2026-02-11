@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crt"]
+members = [".", "crt", "cli"]
 
 [package]
 name = "crtty"
@@ -8,7 +8,10 @@ edition = "2021"
 description = "Post-processing shader framework for OpenGL apps via LD_PRELOAD"
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/kosa/CRTty"
+homepage = "https://github.com/kosa/CRTty"
 keywords = ["crt", "kitty", "terminal", "opengl", "postprocessing"]
+categories = ["graphics", "rendering"]
 
 [lib]
 name = "crtty"
