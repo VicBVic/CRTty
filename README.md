@@ -1,6 +1,17 @@
 # CRTty
 
+<p align="center">
+  <a href="https://aur.archlinux.org/packages/crtty-git"><img src="https://img.shields.io/aur/version/crtty-git?color=458588&label=AUR&style=flat" /></a>
+  <a href="https://crates.io/crates/crtty"><img src="https://img.shields.io/crates/v/crtty?color=d65d0e&label=Crates.io&style=flat" /></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Made%20with-Rust-d65d0e?style=flat&logo=rust&logoColor=white" /></a>
+</p>
+
 **Post-processing shader framework for [kitty](https://sw.kovidgoyal.net/kitty/) terminal via `LD_PRELOAD`**
+
+
+<p align="center">
+  <img src="assets/image.png" alt="CRTty preview" width="720">
+</p>
 
 Inject custom fragment shaders into kitty (or any EGL/GLX application) —
 no patches, no Vulkan, no special drivers.  Ships with a built-in
