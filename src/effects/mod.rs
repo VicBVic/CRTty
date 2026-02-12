@@ -1,7 +1,9 @@
 pub mod crt;
+pub mod custom;
 pub mod greyscale;
 pub mod invert;
 pub use crt::Crt;
+pub use custom::Custom;
 pub use greyscale::Greyscale;
 pub use invert::Invert;
 
@@ -12,6 +14,7 @@ pub enum Builtin {
     Crt(Crt),
     Greyscale(Greyscale),
     Invert(Invert),
+    Custom(Custom),
 }
 
 impl Builtin {
@@ -20,6 +23,9 @@ impl Builtin {
         match std::env::var("CRTTY_EFFECT").as_deref() {
             Ok("greyscale") => Self::Greyscale(Greyscale),
             Ok("invert") => Self::Invert(Invert),
+            Ok(path) if path.ends_with(".glsl") || path.contains('/') => {
+                Self::Custom(Custom::from_file(path))
+            }
             _ => Self::Crt(Crt::default()),
         }
     }
@@ -33,6 +39,7 @@ impl Effect for Builtin {
             Self::Crt(e) => e.fragment_shader(),
             Self::Greyscale(e) => e.fragment_shader(),
             Self::Invert(e) => e.fragment_shader(),
+            Self::Custom(e) => e.fragment_shader(),
         }
     }
 
@@ -41,6 +48,7 @@ impl Effect for Builtin {
             Self::Crt(e) => e.setup(program),
             Self::Greyscale(_) => {}
             Self::Invert(_) => {}
+            Self::Custom(_) => {}
         }
     }
 
@@ -49,6 +57,7 @@ impl Effect for Builtin {
             Self::Crt(e) => e.set_uniforms(program, w, h, frame),
             Self::Greyscale(_) => {}
             Self::Invert(_) => {}
+            Self::Custom(_) => {}
         }
     }
 
@@ -57,6 +66,7 @@ impl Effect for Builtin {
             Self::Crt(e) => e.enabled(),
             Self::Greyscale(_) => true,
             Self::Invert(_) => true,
+            Self::Custom(_) => true,
         }
     }
 }

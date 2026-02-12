@@ -43,10 +43,22 @@ fn main() {
         i += 1;
     }
 
-    if !EFFECTS.contains(&effect.as_str()) {
+    if !is_custom_shader(&effect) && !EFFECTS.contains(&effect.as_str()) {
         eprintln!("crtty: unknown effect '{effect}'");
         eprintln!("Run `crtty --list` for available effects.");
+        eprintln!("Or pass a path to a .glsl file.");
         std::process::exit(1);
+    }
+
+    if is_custom_shader(&effect) {
+        let path = std::path::Path::new(&effect);
+        if !path.exists() {
+            eprintln!("crtty: shader file not found: {effect}");
+            std::process::exit(1);
+        }
+        if let Ok(abs) = std::fs::canonicalize(path) {
+            effect = abs.to_string_lossy().to_string();
+        }
     }
 
     let lib = find_lib();
@@ -86,6 +98,10 @@ fn find_lib() -> String {
     format!("{home}/.local/lib/libcrtty_crt.so")
 }
 
+fn is_custom_shader(name: &str) -> bool {
+    name.ends_with(".glsl") || name.contains('/')
+}
+
 fn print_help() {
     println!(
         "\
@@ -95,14 +111,14 @@ USAGE:
     crtty [OPTIONS] [-- KITTY_ARGS...]
 
 OPTIONS:
-    -s, --shader <NAME>    Effect to use (default: crt)
-    -l, --list             List available effects
-    -h, --help             Show this help
+    -s, --shader <NAME|PATH>  Effect name or path to .glsl file (default: crt)
+    -l, --list                List available built-in effects
+    -h, --help                Show this help
 
 EXAMPLES:
-    crtty                          CRT monitor effect
-    crtty -s greyscale             Greyscale shader
-    crtty -s invert                Invert colors
-    crtty -s crt -- --hold -e htop CRT + pass args to kitty"
+    crtty                              CRT monitor effect
+    crtty -s greyscale                 Greyscale shader
+    crtty -s ./my_shader.glsl          Custom GLSL file
+    crtty -s crt -- --hold -e htop     CRT + pass args to kitty"
     );
 }

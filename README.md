@@ -45,10 +45,34 @@ make uninstall
 ## Usage
 
 ```bash
-crtty                   # launch kitty with CRT effect (default)
-crtty --list            # show all available effects
-crtty -s greyscale      # use a different effect
-crtty -s crt -- --hold  # pass extra args to kitty
+crtty                        # launch kitty with CRT effect (default)
+crtty --list                 # show all available effects
+crtty -s greyscale           # use a different effect
+crtty -s ./my_shader.glsl    # use a custom GLSL file
+crtty -s crt -- --hold       # pass extra args to kitty
+```
+
+### Custom GLSL shaders
+
+Write a standard GLSL 330 core fragment shader. It receives `in vec2 v_uv`
+and `uniform sampler2D u_input` (the screen contents), and must write
+`out vec4 o_color`:
+
+```glsl
+#version 330 core
+in vec2 v_uv;
+out vec4 o_color;
+uniform sampler2D u_input;
+
+void main() {
+    vec3 c = texture(u_input, v_uv).rgb;
+    float l = dot(c, vec3(0.299, 0.587, 0.114));
+    o_color = vec4(l, l, l, 1.0);
+}
+```
+
+```bash
+crtty -s ./sepia.glsl
 ```
 
 ## Write your own effect
