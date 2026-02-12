@@ -12,6 +12,12 @@ repository = "https://github.com/kosa12/CRTty"
 homepage = "https://github.com/kosa12/CRTty"
 keywords = ["crt", "kitty", "terminal", "opengl", "postprocessing"]
 categories = ["graphics", "rendering"]
+exclude = [
+    "assets/",
+    ".github/",
+    "PKGBUILD",
+    "flake.nix"
+]
 
 [lib]
 name = "crtty"
