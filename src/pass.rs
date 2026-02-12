@@ -6,6 +6,7 @@ use crate::Effect;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
+use std::time::Instant;
 
 static STATE: Mutex<Option<PassState>> = Mutex::new(None);
 static FRAME: AtomicU64 = AtomicU64::new(0);
@@ -17,6 +18,9 @@ struct PassState {
     tex_w: GLsizei,
     tex_h: GLsizei,
     u_input: GLint,
+    u_time: GLint,
+    u_resolution: GLint,
+    start: Instant,
 }
 
 const VERT_SRC: &str = r#"#version 330 core
@@ -82,9 +86,11 @@ unsafe fn init_state(effect: &mut dyn Effect) -> Result<PassState, String> {
     (glBindTexture.unwrap())(GL_TEXTURE_2D, 0);
 
     let u_input = (glGetUniformLocation.unwrap())(program, b"u_input\0".as_ptr() as *const _);
+    let u_time = (glGetUniformLocation.unwrap())(program, b"u_time\0".as_ptr() as *const _);
+    let u_resolution = (glGetUniformLocation.unwrap())(program, b"u_resolution\0".as_ptr() as *const _);
 
     eprintln!(
-        "[CRTty] Initialized — program={}, vao={}, tex={}",
+        "[CRTty] Initialized \u{2014} program={}, vao={}, tex={}",
         program, vao, tex,
     );
 
@@ -95,6 +101,9 @@ unsafe fn init_state(effect: &mut dyn Effect) -> Result<PassState, String> {
         tex_w: 0,
         tex_h: 0,
         u_input,
+        u_time,
+        u_resolution,
+        start: Instant::now(),
     })
 }
 
@@ -145,6 +154,13 @@ unsafe fn do_pass(state: &mut PassState, effect: &dyn Effect) {
 
     (glUseProgram.unwrap())(state.program);
     (glUniform1i.unwrap())(state.u_input, 0);
+
+    if state.u_time >= 0 {
+        (glUniform1f.unwrap())(state.u_time, state.start.elapsed().as_secs_f32());
+    }
+    if state.u_resolution >= 0 {
+        (glUniform2f.unwrap())(state.u_resolution, w as f32, h as f32);
+    }
 
     let frame = FRAME.load(Ordering::Relaxed);
     effect.set_uniforms(state.program, w, h, frame);

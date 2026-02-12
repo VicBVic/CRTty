@@ -54,26 +54,44 @@ crtty -s crt -- --hold       # pass extra args to kitty
 
 ### Custom GLSL shaders
 
-Write a standard GLSL 330 core fragment shader. It receives `in vec2 v_uv`
-and `uniform sampler2D u_input` (the screen contents), and must write
-`out vec4 o_color`:
+Write a standard GLSL 330 core fragment shader. It receives these inputs
+automatically:
+
+| Uniform / Input | Type | Description |
+|-----------------|------|-------------|
+| `in vec2 v_uv` | vec2 | Texture coordinates (0–1) |
+| `uniform sampler2D u_input` | sampler2D | Screen contents |
+| `uniform float u_time` | float | Seconds since init (for animation) |
+| `uniform vec2 u_resolution` | vec2 | Viewport size in pixels |
+
+Must write `out vec4 o_color`. All uniforms except `u_input` are optional.
+
+Example — animated RGB wave:
 
 ```glsl
 #version 330 core
 in vec2 v_uv;
 out vec4 o_color;
 uniform sampler2D u_input;
+uniform float u_time;
+uniform vec2 u_resolution;
 
 void main() {
-    vec3 c = texture(u_input, v_uv).rgb;
-    float l = dot(c, vec3(0.299, 0.587, 0.114));
-    o_color = vec4(l, l, l, 1.0);
+    float wave = sin(v_uv.y * 40.0 + u_time * 3.0) * 0.003;
+    vec3 c;
+    c.r = texture(u_input, v_uv + vec2(wave, 0.0)).r;
+    c.g = texture(u_input, v_uv).g;
+    c.b = texture(u_input, v_uv - vec2(wave, 0.0)).b;
+    float scan = 0.95 + 0.05 * sin(v_uv.y * u_resolution.y * 3.14 + u_time * 2.0);
+    o_color = vec4(c * scan, 1.0);
 }
 ```
 
 ```bash
-crtty -s ./sepia.glsl
+crtty -s ./wave.glsl
 ```
+
+See `examples/` for more sample shaders.
 
 ## Write your own effect
 
@@ -182,10 +200,13 @@ src/
     crt.rs        Built-in CRT effect
     greyscale.rs  Greyscale effect
     invert.rs     Color inversion effect
+    custom.rs     Runtime GLSL file loader
 cli/
   src/main.rs     CLI launcher (crtty binary)
 crt/
   src/lib.rs      Default cdylib (Builtin::from_env())
+examples/
+  wave.glsl       Animated RGB wave + scanlines
 PKGBUILD          Arch Linux / AUR package
 flake.nix         Nix flake
 ```

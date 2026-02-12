@@ -188,6 +188,7 @@ gl_fn!(
 );
 gl_fn!(glUniform1i, unsafe extern "C" fn(GLint, GLint));
 gl_fn!(glUniform1f, unsafe extern "C" fn(GLint, GLfloat));
+gl_fn!(glUniform2f, unsafe extern "C" fn(GLint, GLfloat, GLfloat));
 
 gl_fn!(
     glGenVertexArrays,
@@ -267,6 +268,7 @@ pub fn ensure_loaded() {
         load!(glGetUniformLocation);
         load!(glUniform1i);
         load!(glUniform1f);
+        load!(glUniform2f);
 
         load!(glGenVertexArrays);
         load!(glDeleteVertexArrays);
