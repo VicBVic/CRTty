@@ -6,17 +6,26 @@
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Made%20with-Rust-d65d0e?style=flat&logo=rust&logoColor=white" /></a>
 </p>
 
-**Post-processing shader framework for [kitty](https://sw.kovidgoyal.net/kitty/) terminal via `LD_PRELOAD`**
+<p align="center">
+Post-processing shader framework for <a href="https://sw.kovidgoyal.net/kitty/">kitty</a> terminal via <b>LD_PRELOAD</b>
+</p>
 
 
 <p align="center">
   <img src="assets/image.png" alt="CRTty preview" width="720">
 </p>
 
-Inject custom fragment shaders into kitty (or any EGL/GLX application) —
-no patches, no Vulkan, no special drivers.  Ships with a built-in
+Inject custom fragment shaders into kitty (or any EGL/GLX application) -
+no patches, no special drivers.  Ships with a built-in
 **CRT monitor** effect (scanlines, phosphor glow, barrel distortion,
 vignette, chromatic aberration).
+
+## Highlights
+
+- Built-in effects: `crt`, `greyscale`, `invert`
+- Custom `.glsl` shaders with live hot-reload
+- Auto uniforms for animation: `u_time`, `u_resolution`
+- No app patching required (`LD_PRELOAD` only)
 
 ## Installation
 
@@ -25,20 +34,20 @@ Requires **Linux with glibc**, **OpenGL 3.3+**, and **Rust stable** (build only)
 ### From source
 
 ```bash
-git clone https://github.com/kosa/CRTty && cd CRTty
+git clone https://github.com/kosa12/CRTty && cd CRTty
 make install        # builds + installs to ~/.local
 ```
 
 ### Arch Linux (AUR)
 
 ```bash
-yay -S crtty
+yay -S crtty-git
 ```
 
 ### Nix
 
 ```bash
-nix profile install github:kosa/CRTty
+nix profile install github:kosa12/CRTty
 ```
 
 ### System-wide
@@ -60,6 +69,7 @@ crtty                        # launch kitty with CRT effect (default)
 crtty --list                 # show all available effects
 crtty -s greyscale           # use a different effect
 crtty -s ./my_shader.glsl    # use a custom GLSL file
+crtty -s examples/retro.glsl # built-in retro example
 crtty -s crt -- --hold       # pass extra args to kitty
 ```
 
