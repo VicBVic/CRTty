@@ -29,27 +29,23 @@ static REAL_EGL_SWAP: OnceLock<EglSwapBuffersFn> = OnceLock::new();
 static REAL_GLX_SWAP: OnceLock<GlxSwapBuffersFn> = OnceLock::new();
 static REAL_EGL_GET_PROC: OnceLock<EglGetProcAddressFn> = OnceLock::new();
 
+unsafe fn cast_sym<T: Copy>(ptr: *mut libc::c_void) -> T {
+    std::mem::transmute_copy::<*mut libc::c_void, T>(&ptr)
+}
+
 fn ensure_real_dlsym() {
     if REAL_DLSYM.get().is_some() {
         return;
     }
     unsafe {
-        let fp = dlvsym(
-            libc::RTLD_NEXT,
-            b"dlsym\0".as_ptr() as *const _,
-            b"GLIBC_2.34\0".as_ptr() as *const _,
-        );
+        let fp = dlvsym(libc::RTLD_NEXT, c"dlsym".as_ptr(), c"GLIBC_2.34".as_ptr());
         if !fp.is_null() {
-            let _ = REAL_DLSYM.set(std::mem::transmute(fp));
+            let _ = REAL_DLSYM.set(cast_sym(fp));
             return;
         }
-        let fp2 = dlvsym(
-            libc::RTLD_NEXT,
-            b"dlsym\0".as_ptr() as *const _,
-            b"GLIBC_2.2.5\0".as_ptr() as *const _,
-        );
+        let fp2 = dlvsym(libc::RTLD_NEXT, c"dlsym".as_ptr(), c"GLIBC_2.2.5".as_ptr());
         if !fp2.is_null() {
-            let _ = REAL_DLSYM.set(std::mem::transmute(fp2));
+            let _ = REAL_DLSYM.set(cast_sym(fp2));
             return;
         }
     }
@@ -71,11 +67,10 @@ pub(crate) unsafe fn get_real_gl_proc(name: *const libc::c_char) -> *mut libc::c
     match REAL_EGL_GET_PROC.get() {
         Some(f) => f(name),
         None => {
-            let glx_name = b"glXGetProcAddress\0";
-            let glx_fn = real_dlsym(libc::RTLD_DEFAULT, glx_name.as_ptr() as *const _);
+            let glx_fn = real_dlsym(libc::RTLD_DEFAULT, c"glXGetProcAddress".as_ptr());
             if !glx_fn.is_null() {
                 let glx_get: unsafe extern "C" fn(*const libc::c_char) -> *mut libc::c_void =
-                    std::mem::transmute(glx_fn);
+                    cast_sym(glx_fn);
                 glx_get(name)
             } else {
                 std::ptr::null_mut()
@@ -117,7 +112,7 @@ unsafe extern "C" fn crtty_egl_get_proc_address(name: *const libc::c_char) -> *m
             if let Some(real_gpa) = REAL_EGL_GET_PROC.get() {
                 let real = real_gpa(name);
                 if !real.is_null() {
-                    let _ = REAL_EGL_SWAP.set(std::mem::transmute(real));
+                    let _ = REAL_EGL_SWAP.set(cast_sym(real));
                 }
             }
             return crtty_egl_swap as *mut libc::c_void;
@@ -141,7 +136,7 @@ pub unsafe fn intercepted_dlsym(
             b"eglSwapBuffers" => {
                 let real = real_dlsym(handle, symbol);
                 if !real.is_null() {
-                    let _ = REAL_EGL_SWAP.set(std::mem::transmute(real));
+                    let _ = REAL_EGL_SWAP.set(cast_sym(real));
                     eprintln!("[CRTty] dlsym intercepted eglSwapBuffers — real={:p}", real);
                 }
                 return crtty_egl_swap as *mut libc::c_void;
@@ -149,7 +144,7 @@ pub unsafe fn intercepted_dlsym(
             b"glXSwapBuffers" => {
                 let real = real_dlsym(handle, symbol);
                 if !real.is_null() {
-                    let _ = REAL_GLX_SWAP.set(std::mem::transmute(real));
+                    let _ = REAL_GLX_SWAP.set(cast_sym(real));
                     eprintln!("[CRTty] dlsym intercepted glXSwapBuffers — real={:p}", real);
                 }
                 return crtty_glx_swap as *mut libc::c_void;
@@ -157,7 +152,7 @@ pub unsafe fn intercepted_dlsym(
             b"eglGetProcAddress" => {
                 let real = real_dlsym(handle, symbol);
                 if !real.is_null() {
-                    let _ = REAL_EGL_GET_PROC.set(std::mem::transmute(real));
+                    let _ = REAL_EGL_GET_PROC.set(cast_sym(real));
                     eprintln!(
                         "[CRTty] dlsym intercepted eglGetProcAddress — real={:p}",
                         real

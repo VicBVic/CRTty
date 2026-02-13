@@ -100,21 +100,15 @@ pub fn run_pass(effect: &mut dyn Effect) {
                                 }
                                 state.program = new_prog;
                                 state.u_input = unsafe {
-                                    (glGetUniformLocation.unwrap())(
-                                        new_prog,
-                                        b"u_input\0".as_ptr() as *const _,
-                                    )
+                                    (glGetUniformLocation.unwrap())(new_prog, c"u_input".as_ptr())
                                 };
                                 state.u_time = unsafe {
-                                    (glGetUniformLocation.unwrap())(
-                                        new_prog,
-                                        b"u_time\0".as_ptr() as *const _,
-                                    )
+                                    (glGetUniformLocation.unwrap())(new_prog, c"u_time".as_ptr())
                                 };
                                 state.u_resolution = unsafe {
                                     (glGetUniformLocation.unwrap())(
                                         new_prog,
-                                        b"u_resolution\0".as_ptr() as *const _,
+                                        c"u_resolution".as_ptr(),
                                     )
                                 };
                                 effect.setup(new_prog);
@@ -133,7 +127,7 @@ pub fn run_pass(effect: &mut dyn Effect) {
     unsafe { do_pass(state, effect) };
 
     let n = FRAME.fetch_add(1, Ordering::Relaxed);
-    if n == 0 || n == 60 || n % 600 == 0 {
+    if n == 0 || n == 60 || n.is_multiple_of(600) {
         eprintln!("[CRTty] pass OK — frame {}", n);
     }
 }
@@ -155,10 +149,9 @@ unsafe fn init_state(effect: &mut dyn Effect) -> Result<PassState, String> {
     (glTexParameteri.unwrap())(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     (glBindTexture.unwrap())(GL_TEXTURE_2D, 0);
 
-    let u_input = (glGetUniformLocation.unwrap())(program, b"u_input\0".as_ptr() as *const _);
-    let u_time = (glGetUniformLocation.unwrap())(program, b"u_time\0".as_ptr() as *const _);
-    let u_resolution =
-        (glGetUniformLocation.unwrap())(program, b"u_resolution\0".as_ptr() as *const _);
+    let u_input = (glGetUniformLocation.unwrap())(program, c"u_input".as_ptr());
+    let u_time = (glGetUniformLocation.unwrap())(program, c"u_time".as_ptr());
+    let u_resolution = (glGetUniformLocation.unwrap())(program, c"u_resolution".as_ptr());
 
     eprintln!(
         "[CRTty] Initialized \u{2014} program={}, vao={}, tex={}",

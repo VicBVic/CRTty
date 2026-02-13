@@ -11,6 +11,12 @@ use std::sync::{Once, OnceLock};
 
 pub struct GlFn<T: Copy>(OnceLock<T>);
 
+impl<T: Copy> Default for GlFn<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: Copy> GlFn<T> {
     pub const fn new() -> Self {
         Self(OnceLock::new())
@@ -220,16 +226,20 @@ gl_fn!(glFinish, unsafe extern "C" fn());
 
 static INIT: Once = Once::new();
 
+unsafe fn cast_gl_fn<T: Copy>(ptr: *mut libc::c_void) -> T {
+    std::mem::transmute_copy::<*mut libc::c_void, T>(&ptr)
+}
+
 macro_rules! load {
     ($name:ident) => {
         let sym = concat!(stringify!($name), "\0");
         let p = crate::hook::real_dlsym(libc::RTLD_DEFAULT, sym.as_ptr() as *const _);
         if !p.is_null() {
-            $name.set(std::mem::transmute(p));
+            $name.set(cast_gl_fn(p));
         } else {
             let p2 = crate::hook::get_real_gl_proc(sym.as_ptr() as *const _);
             if !p2.is_null() {
-                $name.set(std::mem::transmute(p2));
+                $name.set(cast_gl_fn(p2));
             }
         }
     };
