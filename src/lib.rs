@@ -34,6 +34,13 @@ pub trait Effect: Send + 'static {
     fn env_var(&self) -> Option<&str> {
         Some("ENABLE_CRTTY")
     }
+
+    /// Optional path to a `.glsl` file for hot-reload support.
+    /// When this returns `Some`, the engine will watch the file and
+    /// recompile the shader on save.
+    fn shader_path(&self) -> Option<&str> {
+        None
+    }
 }
 
 #[doc(hidden)]

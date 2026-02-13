@@ -3,6 +3,7 @@
 use crate::Effect;
 
 pub struct Custom {
+    path: String,
     source: String,
 }
 
@@ -12,12 +13,19 @@ impl Custom {
             eprintln!("[CRTty] failed to read shader '{path}': {e}");
             std::process::exit(1);
         });
-        Self { source }
+        Self {
+            path: path.to_string(),
+            source,
+        }
     }
 }
 
 impl Effect for Custom {
     fn fragment_shader(&self) -> &str {
         &self.source
+    }
+
+    fn shader_path(&self) -> Option<&str> {
+        Some(&self.path)
     }
 }

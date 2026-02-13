@@ -6,10 +6,17 @@ use crate::Effect;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 static STATE: Mutex<Option<PassState>> = Mutex::new(None);
 static FRAME: AtomicU64 = AtomicU64::new(0);
+static RELOAD: Mutex<Option<ReloadState>> = Mutex::new(None);
+
+struct ReloadState {
+    path: String,
+    last_mtime: SystemTime,
+    check_counter: u64,
+}
 
 struct PassState {
     program: GLuint,
@@ -51,6 +58,18 @@ pub fn run_pass(effect: &mut dyn Effect) {
 
     let mut guard = STATE.lock().unwrap();
     if guard.is_none() {
+        // Set up hot-reload if the effect has a file path
+        if let Some(path) = effect.shader_path() {
+            let mtime = std::fs::metadata(path)
+                .and_then(|m| m.modified())
+                .unwrap_or(SystemTime::UNIX_EPOCH);
+            eprintln!("[CRTty] hot-reload watching: {path}");
+            *RELOAD.lock().unwrap() = Some(ReloadState {
+                path: path.to_string(),
+                last_mtime: mtime,
+                check_counter: 0,
+            });
+        }
         match unsafe { init_state(effect) } {
             Ok(s) => *guard = Some(s),
             Err(e) => {
@@ -59,6 +78,57 @@ pub fn run_pass(effect: &mut dyn Effect) {
             }
         }
     }
+
+    // Hot-reload: check file mtime every ~10 frames
+    {
+        let mut reload = RELOAD.lock().unwrap();
+        if let Some(ref mut rs) = *reload {
+            rs.check_counter += 1;
+            if rs.check_counter % 10 == 0 {
+                let cur_mtime = std::fs::metadata(&rs.path)
+                    .and_then(|m| m.modified())
+                    .unwrap_or(SystemTime::UNIX_EPOCH);
+                if cur_mtime != rs.last_mtime {
+                    rs.last_mtime = cur_mtime;
+                    eprintln!("[CRTty] file changed, recompiling...");
+                    match std::fs::read_to_string(&rs.path) {
+                        Ok(new_src) => match unsafe { compile_program(VERT_SRC, &new_src) } {
+                            Ok(new_prog) => {
+                                let state = guard.as_mut().unwrap();
+                                unsafe {
+                                    (glDeleteProgram.unwrap())(state.program);
+                                }
+                                state.program = new_prog;
+                                state.u_input = unsafe {
+                                    (glGetUniformLocation.unwrap())(
+                                        new_prog,
+                                        b"u_input\0".as_ptr() as *const _,
+                                    )
+                                };
+                                state.u_time = unsafe {
+                                    (glGetUniformLocation.unwrap())(
+                                        new_prog,
+                                        b"u_time\0".as_ptr() as *const _,
+                                    )
+                                };
+                                state.u_resolution = unsafe {
+                                    (glGetUniformLocation.unwrap())(
+                                        new_prog,
+                                        b"u_resolution\0".as_ptr() as *const _,
+                                    )
+                                };
+                                effect.setup(new_prog);
+                                eprintln!("[CRTty] shader reloaded from {}", rs.path);
+                            }
+                            Err(e) => eprintln!("[CRTty] reload compile error: {e}"),
+                        },
+                        Err(e) => eprintln!("[CRTty] failed to read {}: {e}", rs.path),
+                    }
+                }
+            }
+        }
+    }
+
     let state = guard.as_mut().unwrap();
     unsafe { do_pass(state, effect) };
 
@@ -87,7 +157,8 @@ unsafe fn init_state(effect: &mut dyn Effect) -> Result<PassState, String> {
 
     let u_input = (glGetUniformLocation.unwrap())(program, b"u_input\0".as_ptr() as *const _);
     let u_time = (glGetUniformLocation.unwrap())(program, b"u_time\0".as_ptr() as *const _);
-    let u_resolution = (glGetUniformLocation.unwrap())(program, b"u_resolution\0".as_ptr() as *const _);
+    let u_resolution =
+        (glGetUniformLocation.unwrap())(program, b"u_resolution\0".as_ptr() as *const _);
 
     eprintln!(
         "[CRTty] Initialized \u{2014} program={}, vao={}, tex={}",

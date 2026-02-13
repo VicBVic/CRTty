@@ -63,6 +63,12 @@ crtty -s ./my_shader.glsl    # use a custom GLSL file
 crtty -s crt -- --hold       # pass extra args to kitty
 ```
 
+Custom `.glsl` shaders are **hot-reloaded** - edit the file, save, and
+the effect updates live without restarting kitty. Changes are picked up
+on the next kitty redraw (cursor blink, typing, any terminal output).
+If the shader fails to compile, the previous shader stays active and the
+GLSL error is printed to stderr.
+
 ### Custom GLSL shaders
 
 Write a standard GLSL 330 core fragment shader. It receives these inputs

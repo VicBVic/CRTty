@@ -69,4 +69,11 @@ impl Effect for Builtin {
             Self::Custom(_) => true,
         }
     }
+
+    fn shader_path(&self) -> Option<&str> {
+        match self {
+            Self::Custom(e) => e.shader_path(),
+            _ => None,
+        }
+    }
 }
