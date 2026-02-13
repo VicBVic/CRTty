@@ -113,9 +113,7 @@ pub fn run_pass(effect: &mut dyn Effect) {
                                 unsafe { set_program(state, new_prog) };
                                 effect.setup(new_prog);
                                 if state.error_overlay {
-                                    eprintln!(
-                                        "[CRTty] shader recovered; disabling error overlay"
-                                    );
+                                    eprintln!("[CRTty] shader recovered; disabling error overlay");
                                 }
                                 state.error_overlay = false;
                                 eprintln!("[CRTty] shader reloaded from {}", rs.path);

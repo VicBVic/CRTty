@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-Post-processing shader framework for <a href="https://sw.kovidgoyal.net/kitty/">kitty</a> terminal via <b>LD_PRELOAD</b>
+Post-processing shader framework for <a href="https://sw.kovidgoyal.net/kitty/">kitty</a> and <a href="https://alacritty.org/">Alacritty</a> via <b>LD_PRELOAD</b>
 </p>
 
 
@@ -15,7 +15,7 @@ Post-processing shader framework for <a href="https://sw.kovidgoyal.net/kitty/">
   <img src="assets/image.png" alt="CRTty preview" width="720">
 </p>
 
-Inject custom fragment shaders into kitty (or any EGL/GLX application) -
+Inject custom fragment shaders into kitty/alacritty (or any EGL/GLX application) -
 no patches, no special drivers.  Ships with a built-in
 **CRT monitor** effect (scanlines, phosphor glow, barrel distortion,
 vignette, chromatic aberration).
@@ -66,11 +66,13 @@ make uninstall
 
 ```bash
 crtty                        # launch kitty with CRT effect (default)
+crtty --app alacritty        # launch alacritty with CRT effect
 crtty --list                 # show all available effects
+crtty --migrate-config       # migrate legacy ~/.config/crtty.conf to kitty.conf
 crtty -s greyscale           # use a different effect
 crtty -s ./my_shader.glsl    # use a custom GLSL file
 crtty -s examples/retro.glsl # built-in retro example
-crtty -s crt -- --hold       # pass extra args to kitty
+crtty -s crt -- --hold       # pass extra args to selected app
 ```
 
 Custom `.glsl` shaders are **hot-reloaded** - edit the file, save, and
@@ -240,7 +242,22 @@ flake.nix         Nix flake
 
 ## CRT effect configuration
 
-Edit `~/.config/crtty.conf`:
+Per-app configs:
+
+- `~/.config/crtty/kitty.conf`
+- `~/.config/crtty/alacritty.conf`
+
+If you already have a legacy `~/.config/crtty.conf`, CRTty automatically
+migrates it to `~/.config/crtty/kitty.conf` on first run.
+
+Manual migration command:
+
+```bash
+crtty --migrate-config
+crtty --app alacritty --migrate-config
+```
+
+Example config:
 
 ```ini
 enabled=1

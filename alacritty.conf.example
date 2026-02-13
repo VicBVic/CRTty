@@ -5,25 +5,22 @@
 #
 # All values are optional — defaults are used for any missing key.
 # Lines starting with # or ; are comments.
-#
-# NOTE: each terminal has its own tuned defaults.
-# See kitty.conf.example and alacritty.conf.example for details.
 
 # Master enable switch (also requires ENABLE_CRTTY=1 env var)
 enabled=1
 
 # Scanline intensity: 0.0 (off) to 1.0 (full dark bands)
 # Tip: keep ≤0.3 for readable terminal text
-scanline_intensity=0.35
+scanline_intensity=0.05
 
 # Phosphor glow strength: 0.5 (subtle) to 2.0 (heavy bloom)
 phosphor_strength=0.6
 
 # Barrel distortion / screen curvature: 0.0 (flat) to 0.1 (very curved)
-curvature=0.09
+curvature=0.02
 
 # Vignette (corner darkening): 0.0 (none) to 1.0 (heavy)
-vignette=0.35
+vignette=0.25
 
 # Chromatic aberration (RGB fringing): 0.0 (none) to 0.01 (noticeable)
-aberration=0.009
+aberration=0.005

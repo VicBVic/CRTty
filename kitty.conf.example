@@ -5,9 +5,6 @@
 #
 # All values are optional — defaults are used for any missing key.
 # Lines starting with # or ; are comments.
-#
-# NOTE: each terminal has its own tuned defaults.
-# See kitty.conf.example and alacritty.conf.example for details.
 
 # Master enable switch (also requires ENABLE_CRTTY=1 env var)
 enabled=1

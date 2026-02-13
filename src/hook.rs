@@ -21,11 +21,14 @@ extern "C" {
 
 type DlsymFn = unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char) -> *mut libc::c_void;
 type EglSwapBuffersFn = unsafe extern "C" fn(EGLDisplay, EGLSurface) -> EGLBoolean;
+type EglSwapBuffersDamageFn =
+    unsafe extern "C" fn(EGLDisplay, EGLSurface, *const libc::c_int, libc::c_int) -> EGLBoolean;
 type GlxSwapBuffersFn = unsafe extern "C" fn(XDisplay, GLXDrawable);
 type EglGetProcAddressFn = unsafe extern "C" fn(*const libc::c_char) -> *mut libc::c_void;
 
 static REAL_DLSYM: OnceLock<DlsymFn> = OnceLock::new();
 static REAL_EGL_SWAP: OnceLock<EglSwapBuffersFn> = OnceLock::new();
+static REAL_EGL_SWAP_DAMAGE: OnceLock<EglSwapBuffersDamageFn> = OnceLock::new();
 static REAL_GLX_SWAP: OnceLock<GlxSwapBuffersFn> = OnceLock::new();
 static REAL_EGL_GET_PROC: OnceLock<EglGetProcAddressFn> = OnceLock::new();
 
@@ -105,17 +108,43 @@ unsafe extern "C" fn crtty_glx_swap(dpy: XDisplay, drawable: GLXDrawable) {
     }
 }
 
+unsafe extern "C" fn crtty_egl_swap_damage(
+    dpy: EGLDisplay,
+    surface: EGLSurface,
+    rects: *const libc::c_int,
+    n_rects: libc::c_int,
+) -> EGLBoolean {
+    run_pass();
+    if let Some(f) = REAL_EGL_SWAP_DAMAGE.get() {
+        f(dpy, surface, rects, n_rects)
+    } else {
+        crtty_egl_swap(dpy, surface)
+    }
+}
+
 unsafe extern "C" fn crtty_egl_get_proc_address(name: *const libc::c_char) -> *mut libc::c_void {
     if !name.is_null() {
         let sym = CStr::from_ptr(name);
-        if sym.to_bytes() == b"eglSwapBuffers" {
-            if let Some(real_gpa) = REAL_EGL_GET_PROC.get() {
-                let real = real_gpa(name);
-                if !real.is_null() {
-                    let _ = REAL_EGL_SWAP.set(cast_sym(real));
+        match sym.to_bytes() {
+            b"eglSwapBuffers" => {
+                if let Some(real_gpa) = REAL_EGL_GET_PROC.get() {
+                    let real = real_gpa(name);
+                    if !real.is_null() {
+                        let _ = REAL_EGL_SWAP.set(cast_sym(real));
+                    }
                 }
+                return crtty_egl_swap as *mut libc::c_void;
             }
-            return crtty_egl_swap as *mut libc::c_void;
+            b"eglSwapBuffersWithDamageEXT" | b"eglSwapBuffersWithDamageKHR" => {
+                if let Some(real_gpa) = REAL_EGL_GET_PROC.get() {
+                    let real = real_gpa(name);
+                    if !real.is_null() {
+                        let _ = REAL_EGL_SWAP_DAMAGE.set(cast_sym(real));
+                    }
+                }
+                return crtty_egl_swap_damage as *mut libc::c_void;
+            }
+            _ => {}
         }
     }
     match REAL_EGL_GET_PROC.get() {
@@ -140,6 +169,18 @@ pub unsafe fn intercepted_dlsym(
                     eprintln!("[CRTty] dlsym intercepted eglSwapBuffers — real={:p}", real);
                 }
                 return crtty_egl_swap as *mut libc::c_void;
+            }
+            b"eglSwapBuffersWithDamageEXT" | b"eglSwapBuffersWithDamageKHR" => {
+                let real = real_dlsym(handle, symbol);
+                if !real.is_null() {
+                    let _ = REAL_EGL_SWAP_DAMAGE.set(cast_sym(real));
+                    eprintln!(
+                        "[CRTty] dlsym intercepted {} — real={:p}",
+                        name.to_string_lossy(),
+                        real
+                    );
+                }
+                return crtty_egl_swap_damage as *mut libc::c_void;
             }
             b"glXSwapBuffers" => {
                 let real = real_dlsym(handle, symbol);
@@ -168,6 +209,15 @@ pub unsafe fn intercepted_dlsym(
 
 pub unsafe fn egl_swap_direct(dpy: *mut libc::c_void, surface: *mut libc::c_void) -> u32 {
     crtty_egl_swap(dpy, surface)
+}
+
+pub unsafe fn egl_swap_damage_direct(
+    dpy: *mut libc::c_void,
+    surface: *mut libc::c_void,
+    rects: *const libc::c_int,
+    n_rects: libc::c_int,
+) -> u32 {
+    crtty_egl_swap_damage(dpy, surface, rects, n_rects)
 }
 
 pub unsafe fn glx_swap_direct(dpy: *mut libc::c_void, drawable: libc::c_ulong) {

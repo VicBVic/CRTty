@@ -91,6 +91,28 @@ macro_rules! main {
         }
 
         #[no_mangle]
+        pub unsafe extern "C" fn eglSwapBuffersWithDamageEXT(
+            dpy: *mut $crate::__libc::c_void,
+            surface: *mut $crate::__libc::c_void,
+            rects: *const $crate::__libc::c_int,
+            n_rects: $crate::__libc::c_int,
+        ) -> $crate::__libc::c_uint {
+            $crate::__register_pass_fn(__crtty_run_pass);
+            $crate::hook::egl_swap_damage_direct(dpy, surface, rects, n_rects)
+        }
+
+        #[no_mangle]
+        pub unsafe extern "C" fn eglSwapBuffersWithDamageKHR(
+            dpy: *mut $crate::__libc::c_void,
+            surface: *mut $crate::__libc::c_void,
+            rects: *const $crate::__libc::c_int,
+            n_rects: $crate::__libc::c_int,
+        ) -> $crate::__libc::c_uint {
+            $crate::__register_pass_fn(__crtty_run_pass);
+            $crate::hook::egl_swap_damage_direct(dpy, surface, rects, n_rects)
+        }
+
+        #[no_mangle]
         pub unsafe extern "C" fn glXSwapBuffers(
             dpy: *mut $crate::__libc::c_void,
             drawable: $crate::__libc::c_ulong,

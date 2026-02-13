@@ -8,11 +8,25 @@ fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
     let mut effect = "crt".to_string();
-    let mut kitty_args = Vec::new();
+    let mut app = "kitty".to_string();
+    let mut migrate_only = false;
+    let mut app_args = Vec::new();
     let mut i = 0;
 
     while i < args.len() {
         match args[i].as_str() {
+            "--migrate-config" => {
+                migrate_only = true;
+            }
+            "-a" | "--app" => {
+                i += 1;
+                if i < args.len() {
+                    app = args[i].clone();
+                } else {
+                    eprintln!("crtty: --app requires a value (kitty or alacritty)");
+                    std::process::exit(1);
+                }
+            }
             "-s" | "--shader" => {
                 i += 1;
                 if i < args.len() {
@@ -35,12 +49,23 @@ fn main() {
                 return;
             }
             "--" => {
-                kitty_args.extend_from_slice(&args[i + 1..]);
+                app_args.extend_from_slice(&args[i + 1..]);
                 break;
             }
-            _ => kitty_args.push(args[i].clone()),
+            _ => app_args.push(args[i].clone()),
         }
         i += 1;
+    }
+
+    if app != "kitty" && app != "alacritty" {
+        eprintln!("crtty: unsupported app '{app}'");
+        eprintln!("Supported: kitty, alacritty");
+        std::process::exit(1);
+    }
+
+    if migrate_only {
+        migrate_config_for_app(&app);
+        return;
     }
 
     if !is_custom_shader(&effect) && !EFFECTS.contains(&effect.as_str()) {
@@ -68,14 +93,15 @@ fn main() {
         std::process::exit(1);
     }
 
-    let err = Command::new("kitty")
-        .args(&kitty_args)
+    let err = Command::new(&app)
+        .args(&app_args)
         .env("LD_PRELOAD", &lib)
         .env("ENABLE_CRTTY", "1")
+        .env("CRTTY_APP", &app)
         .env("CRTTY_EFFECT", &effect)
         .exec();
 
-    eprintln!("crtty: failed to launch kitty: {err}");
+    eprintln!("crtty: failed to launch {app}: {err}");
     std::process::exit(1);
 }
 
@@ -105,20 +131,92 @@ fn is_custom_shader(name: &str) -> bool {
 fn print_help() {
     println!(
         "\
-crtty — post-processing shaders for kitty terminal
+crtty — post-processing shaders for kitty/alacritty
 
 USAGE:
-    crtty [OPTIONS] [-- KITTY_ARGS...]
+    crtty [OPTIONS] [-- APP_ARGS...]
 
 OPTIONS:
+    -a, --app <APP>           App to launch: kitty | alacritty (default: kitty)
     -s, --shader <NAME|PATH>  Effect name or path to .glsl file (default: crt)
     -l, --list                List available built-in effects
+    --migrate-config       Move legacy ~/.config/crtty.conf to per-app config
     -h, --help                Show this help
 
 EXAMPLES:
-    crtty                              CRT monitor effect
-    crtty -s greyscale                 Greyscale shader
-    crtty -s ./my_shader.glsl          Custom GLSL file
-    crtty -s crt -- --hold -e htop     CRT + pass args to kitty"
+    crtty                               CRT monitor effect (kitty)
+    crtty --app alacritty               Launch alacritty with CRTty
+    crtty -s greyscale                  Greyscale shader
+    crtty -s ./my_shader.glsl           Custom GLSL file
+    crtty --migrate-config              Migrate legacy config to kitty.conf
+    crtty --app alacritty -- --hold     CRT + pass args to alacritty"
     );
+}
+
+fn config_dir() -> Option<std::path::PathBuf> {
+    if let Ok(xdg) = env::var("XDG_CONFIG_HOME") {
+        let p = std::path::PathBuf::from(&xdg);
+        if p.is_absolute() {
+            return Some(p);
+        }
+    }
+    env::var("HOME")
+        .ok()
+        .map(|h| std::path::PathBuf::from(h).join(".config"))
+}
+
+fn migrate_config_for_app(app: &str) {
+    let Some(base) = config_dir() else {
+        eprintln!("crtty: could not determine config directory");
+        std::process::exit(1);
+    };
+
+    let legacy = base.join("crtty.conf");
+    let new_dir = base.join("crtty");
+    let target = new_dir.join(format!("{app}.conf"));
+
+    if !legacy.exists() {
+        eprintln!("crtty: no legacy config found at {}", legacy.display());
+        return;
+    }
+    if target.exists() {
+        eprintln!(
+            "crtty: target already exists (won't overwrite): {}",
+            target.display()
+        );
+        return;
+    }
+
+    if let Err(e) = std::fs::create_dir_all(&new_dir) {
+        eprintln!("crtty: failed to create {}: {e}", new_dir.display());
+        std::process::exit(1);
+    }
+
+    match std::fs::rename(&legacy, &target) {
+        Ok(_) => {
+            println!(
+                "crtty: migrated {} -> {}",
+                legacy.display(),
+                target.display()
+            );
+        }
+        Err(_) => match std::fs::copy(&legacy, &target) {
+            Ok(_) => {
+                let _ = std::fs::remove_file(&legacy);
+                println!(
+                    "crtty: migrated {} -> {}",
+                    legacy.display(),
+                    target.display()
+                );
+            }
+            Err(e) => {
+                eprintln!(
+                    "crtty: failed migrating {} -> {}: {e}",
+                    legacy.display(),
+                    target.display()
+                );
+                std::process::exit(1);
+            }
+        },
+    }
 }

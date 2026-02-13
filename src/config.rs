@@ -1,4 +1,4 @@
-//! Config file parser (~/.config/crtty.conf).
+//! Config file parser (~/.config/crtty/{kitty,alacritty}.conf).
 
 use std::collections::HashMap;
 use std::fs;
@@ -16,20 +16,38 @@ pub struct CrtConfig {
 
 impl Default for CrtConfig {
     fn default() -> Self {
-        Self {
-            enabled: true,
-            scanline_intensity: 0.75,
-            phosphor_strength: 1.1,
-            curvature: 0.04,
-            vignette: 0.35,
-            aberration: 0.003,
-        }
+        Self::defaults_for("kitty")
     }
 }
 
 impl CrtConfig {
+    /// Return tuned defaults for a specific terminal emulator.
+    pub fn defaults_for(app: &str) -> Self {
+        match app {
+            "alacritty" => Self {
+                enabled: true,
+                scanline_intensity: 0.05,
+                phosphor_strength: 0.6,
+                curvature: 0.02,
+                vignette: 0.25,
+                aberration: 0.005,
+            },
+            // kitty (and anything else) — the "reference" preset
+            _ => Self {
+                enabled: true,
+                scanline_intensity: 0.35,
+                phosphor_strength: 0.6,
+                curvature: 0.09,
+                vignette: 0.35,
+                aberration: 0.009,
+            },
+        }
+    }
+
     pub fn load() -> Self {
-        let mut cfg = Self::default();
+        let app = std::env::var("CRTTY_APP").unwrap_or_else(|_| "kitty".to_string());
+        let mut cfg = Self::defaults_for(&app);
+        migrate_legacy_config();
         let path = match config_path() {
             Some(p) if p.exists() => p,
             _ => {
@@ -81,6 +99,24 @@ impl CrtConfig {
 }
 
 fn config_path() -> Option<PathBuf> {
+    let app = std::env::var("CRTTY_APP").unwrap_or_else(|_| "kitty".to_string());
+    let app_cfg = format!("{}.conf", app);
+
+    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
+        let p = PathBuf::from(&xdg);
+        if p.is_absolute() {
+            return Some(p.join("crtty").join(&app_cfg));
+        }
+    }
+    std::env::var("HOME").ok().map(|h| {
+        PathBuf::from(h)
+            .join(".config")
+            .join("crtty")
+            .join(&app_cfg)
+    })
+}
+
+fn legacy_config_path() -> Option<PathBuf> {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
         let p = PathBuf::from(&xdg);
         if p.is_absolute() {
@@ -90,6 +126,47 @@ fn config_path() -> Option<PathBuf> {
     std::env::var("HOME")
         .ok()
         .map(|h| PathBuf::from(h).join(".config").join("crtty.conf"))
+}
+
+fn migrate_legacy_config() {
+    let Some(old) = legacy_config_path() else {
+        return;
+    };
+    if !old.exists() {
+        return;
+    }
+
+    let Some(new_path) = config_path() else {
+        return;
+    };
+    if new_path.exists() {
+        return;
+    }
+
+    if let Some(parent) = new_path.parent() {
+        if let Err(e) = fs::create_dir_all(parent) {
+            eprintln!("[CRTty] Failed creating config dir {:?}: {}", parent, e);
+            return;
+        }
+    }
+
+    match fs::rename(&old, &new_path) {
+        Ok(_) => {
+            eprintln!("[CRTty] Migrated legacy config {:?} -> {:?}", old, new_path);
+        }
+        Err(_) => match fs::copy(&old, &new_path) {
+            Ok(_) => {
+                let _ = fs::remove_file(&old);
+                eprintln!("[CRTty] Migrated legacy config {:?} -> {:?}", old, new_path);
+            }
+            Err(e) => {
+                eprintln!(
+                    "[CRTty] Failed migrating legacy config {:?} -> {:?}: {}",
+                    old, new_path, e
+                );
+            }
+        },
+    }
 }
 
 fn parse_ini(content: &str) -> HashMap<String, String> {

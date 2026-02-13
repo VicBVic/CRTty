@@ -3,7 +3,7 @@ members = [".", "crt", "cli"]
 
 [package]
 name = "crtty"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "Post-processing shader framework for OpenGL apps via LD_PRELOAD"
 license = "MIT"
