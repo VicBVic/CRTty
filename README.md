@@ -76,8 +76,8 @@ crtty -s crt -- --hold       # pass extra args to kitty
 Custom `.glsl` shaders are **hot-reloaded** - edit the file, save, and
 the effect updates live without restarting kitty. Changes are picked up
 on the next kitty redraw (cursor blink, typing, any terminal output).
-If the shader fails to compile, the previous shader stays active and the
-GLSL error is printed to stderr.
+If the shader fails to compile, a red error overlay is shown and the
+GLSL error is printed to stderr (then it auto-recovers on next valid save).
 
 ### Custom GLSL shaders
 

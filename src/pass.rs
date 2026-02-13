@@ -27,6 +27,7 @@ struct PassState {
     u_input: GLint,
     u_time: GLint,
     u_resolution: GLint,
+    error_overlay: bool,
     start: Instant,
 }
 
@@ -37,6 +38,20 @@ void main() {
     float y = float((gl_VertexID & 2) << 1) - 1.0;
     v_uv = vec2(x, y) * 0.5 + 0.5;
     gl_Position = vec4(x, y, 0.0, 1.0);
+}
+"#;
+
+const ERROR_OVERLAY_FRAG_SRC: &str = r#"#version 330 core
+in vec2 v_uv;
+out vec4 o_color;
+uniform sampler2D u_input;
+uniform float u_time;
+
+void main() {
+    vec3 base = texture(u_input, v_uv).rgb;
+    float pulse = 0.35 + 0.15 * sin(u_time * 6.0);
+    vec3 tinted = mix(base, vec3(0.95, 0.05, 0.05), 0.55 + pulse * 0.25);
+    o_color = vec4(tinted, 1.0);
 }
 "#;
 
@@ -95,26 +110,38 @@ pub fn run_pass(effect: &mut dyn Effect) {
                         Ok(new_src) => match unsafe { compile_program(VERT_SRC, &new_src) } {
                             Ok(new_prog) => {
                                 let state = guard.as_mut().unwrap();
-                                unsafe {
-                                    (glDeleteProgram.unwrap())(state.program);
-                                }
-                                state.program = new_prog;
-                                state.u_input = unsafe {
-                                    (glGetUniformLocation.unwrap())(new_prog, c"u_input".as_ptr())
-                                };
-                                state.u_time = unsafe {
-                                    (glGetUniformLocation.unwrap())(new_prog, c"u_time".as_ptr())
-                                };
-                                state.u_resolution = unsafe {
-                                    (glGetUniformLocation.unwrap())(
-                                        new_prog,
-                                        c"u_resolution".as_ptr(),
-                                    )
-                                };
+                                unsafe { set_program(state, new_prog) };
                                 effect.setup(new_prog);
+                                if state.error_overlay {
+                                    eprintln!(
+                                        "[CRTty] shader recovered; disabling error overlay"
+                                    );
+                                }
+                                state.error_overlay = false;
                                 eprintln!("[CRTty] shader reloaded from {}", rs.path);
                             }
-                            Err(e) => eprintln!("[CRTty] reload compile error: {e}"),
+                            Err(e) => {
+                                eprintln!("[CRTty] reload compile error: {e}");
+                                let state = guard.as_mut().unwrap();
+                                if !state.error_overlay {
+                                    match unsafe {
+                                        compile_program(VERT_SRC, ERROR_OVERLAY_FRAG_SRC)
+                                    } {
+                                        Ok(error_prog) => {
+                                            unsafe { set_program(state, error_prog) };
+                                            state.error_overlay = true;
+                                            eprintln!(
+                                                "[CRTty] showing shader error overlay (red tint)"
+                                            );
+                                        }
+                                        Err(overlay_err) => {
+                                            eprintln!(
+                                                "[CRTty] failed to compile error overlay shader: {overlay_err}"
+                                            );
+                                        }
+                                    }
+                                }
+                            }
                         },
                         Err(e) => eprintln!("[CRTty] failed to read {}: {e}", rs.path),
                     }
@@ -133,9 +160,21 @@ pub fn run_pass(effect: &mut dyn Effect) {
 }
 
 unsafe fn init_state(effect: &mut dyn Effect) -> Result<PassState, String> {
-    let program = compile_program(VERT_SRC, effect.fragment_shader())?;
+    let (program, error_overlay) = match compile_program(VERT_SRC, effect.fragment_shader()) {
+        Ok(program) => (program, false),
+        Err(e) if effect.shader_path().is_some() => {
+            eprintln!("[CRTty] shader compile error on init: {e}");
+            eprintln!("[CRTty] showing shader error overlay (red tint)");
+            let fallback = compile_program(VERT_SRC, ERROR_OVERLAY_FRAG_SRC)
+                .map_err(|fe| format!("{e}; also failed to compile overlay shader: {fe}"))?;
+            (fallback, true)
+        }
+        Err(e) => return Err(e),
+    };
 
-    effect.setup(program);
+    if !error_overlay {
+        effect.setup(program);
+    }
 
     let mut vao: GLuint = 0;
     (glGenVertexArrays.unwrap())(1, &mut vao);
@@ -167,8 +206,17 @@ unsafe fn init_state(effect: &mut dyn Effect) -> Result<PassState, String> {
         u_input,
         u_time,
         u_resolution,
+        error_overlay,
         start: Instant::now(),
     })
+}
+
+unsafe fn set_program(state: &mut PassState, new_prog: GLuint) {
+    (glDeleteProgram.unwrap())(state.program);
+    state.program = new_prog;
+    state.u_input = (glGetUniformLocation.unwrap())(new_prog, c"u_input".as_ptr());
+    state.u_time = (glGetUniformLocation.unwrap())(new_prog, c"u_time".as_ptr());
+    state.u_resolution = (glGetUniformLocation.unwrap())(new_prog, c"u_resolution".as_ptr());
 }
 
 unsafe fn do_pass(state: &mut PassState, effect: &dyn Effect) {
